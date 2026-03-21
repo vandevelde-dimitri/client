@@ -38,9 +38,14 @@ type FormData = yup.InferType<typeof schema>
 interface ReservationModalProps {
   time: string
   date: Date | undefined
+  disabled?: boolean
 }
 
-export function ReservationModal({ time, date }: ReservationModalProps) {
+export function ReservationModal({
+  time,
+  date,
+  disabled,
+}: ReservationModalProps) {
   const {
     register,
     handleSubmit,
@@ -49,7 +54,7 @@ export function ReservationModal({ time, date }: ReservationModalProps) {
   } = useForm<FormData>({
     resolver: yupResolver(schema),
   })
-  const { mutate: createReservation } = useCreateReservations()
+  const { mutate: createReservation, isPending } = useCreateReservations()
 
   const calculateEndTime = (startTime: string) => {
     const [h, m] = startTime.split(":").map(Number)
@@ -93,17 +98,18 @@ export function ReservationModal({ time, date }: ReservationModalProps) {
     <Dialog onOpenChange={(open) => !open && reset()}>
       <DialogTrigger asChild>
         <Button
-          variant="outline"
+          variant={disabled ? "secondary" : "outline"}
           className="h-14 w-full justify-between text-lg"
+          disabled={disabled}
         >
           <span>{time.replace(":", "h")}</span>
           <span className="text-sm text-muted-foreground">
-            Jusqu'à {endTime}
+            {disabled ? "Complet" : `Jusqu'à ${endTime}`}
           </span>
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-106.25">
+      <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>Réserver le {displayDate}</DialogTitle>
@@ -161,8 +167,8 @@ export function ReservationModal({ time, date }: ReservationModalProps) {
           </div>
 
           <DialogFooter>
-            <Button type="submit" className="w-full">
-              Confirmer le rendez-vous
+            <Button type="submit" className="w-full" disabled={isPending}>
+              {isPending ? "Enregistrement..." : "Confirmer le rendez-vous"}
             </Button>
           </DialogFooter>
         </form>
