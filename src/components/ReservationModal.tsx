@@ -1,7 +1,4 @@
-import { yupResolver } from "@hookform/resolvers/yup"
-import { useForm } from "react-hook-form"
-import * as yup from "yup"
-
+import { countReservations } from "@/api/countReservation"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -15,6 +12,10 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useCreateReservations } from "@/hook/useReservations"
+import { yupResolver } from "@hookform/resolvers/yup"
+import { useForm } from "react-hook-form"
+import { toast } from "sonner"
+import * as yup from "yup"
 
 const schema = yup
   .object({
@@ -67,7 +68,7 @@ export function ReservationModal({
     return `${endH}h${endM.toString().padStart(2, "0")}`
   }
 
-  const onSubmit = (data: FormData) => {
+  const onSubmit = async (data: FormData) => {
     if (!date) return
 
     const year = date.getFullYear()
@@ -76,16 +77,37 @@ export function ReservationModal({
 
     const formattedDateTime = `${year}-${month}-${day} ${time.replace("h", ":")}:00`
 
-    const finalPayload = {
-      firstname: data.firstname,
-      lastname: data.lastname,
-      phone: data.phone,
-      creneau: formattedDateTime,
+    try {
+      const currentCount = await countReservations(formattedDateTime)
+
+      if (currentCount >= 2) {
+        toast("Désolé, quelqu'un vient juste de réserver la dernière place !", {
+          description: "Veuillez choisir un autre créneau.",
+        })
+
+        return
+      }
+
+      // --- SI OK, ON CRÉE LA RÉSERVATION ---
+      const finalPayload = {
+        firstname: data.firstname,
+        lastname: data.lastname,
+        phone: data.phone,
+        creneau: formattedDateTime,
+      }
+
+      createReservation(finalPayload, {
+        onSuccess: () => {
+          toast("Réservation confirmée !", {
+            description: `Votre rendez-vous est fixé pour le ${day}/${month} à ${time.replace("h", "h")}.`,
+          })
+          reset()
+          // Optionnel: fermer la modale ici si tu gères l'état 'open'
+        },
+      })
+    } catch (error) {
+      console.error("Erreur lors de la vérification", error)
     }
-
-    createReservation(finalPayload)
-
-    reset()
   }
 
   const displayDate = date?.toLocaleDateString("fr-FR", {
@@ -109,7 +131,7 @@ export function ReservationModal({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>Réserver le {displayDate}</DialogTitle>

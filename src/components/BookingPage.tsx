@@ -72,7 +72,7 @@ export default function BookingInterface() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="h-100 pr-4">
               <div className="grid gap-3">
                 {TIME_SLOTS.map((slot) => (
                   <SlotButton key={slot} time={slot} date={date} />
