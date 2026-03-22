@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { useCreateReservations } from "@/hook/useReservations"
 import { yupResolver } from "@hookform/resolvers/yup"
 import { useForm } from "react-hook-form"
+import { toast } from "sonner"
 import * as yup from "yup"
 
 const schema = yup
@@ -51,7 +52,6 @@ export function ReservationModal({ time, disabled }: ReservationModalProps) {
   })
 
   const { mutate: createReservation, isPending } = useCreateReservations()
-
   const calculateEndTime = (startTime: string) => {
     const [h, m] = startTime.split(":").map(Number)
     let endM = m + 45
@@ -67,7 +67,9 @@ export function ReservationModal({ time, disabled }: ReservationModalProps) {
     const currentCount = await countReservations(time)
 
     if (currentCount >= 2) {
-      alert("Désolé, ce créneau vient d'être rempli par un autre utilisateur !")
+      toast.error("Désolé, ce créneau vient d'être rempli !", {
+        description: "Veuillez choisir un autre créneau.",
+      })
       return
     }
 
@@ -80,6 +82,9 @@ export function ReservationModal({ time, disabled }: ReservationModalProps) {
 
     createReservation(finalPayload, {
       onSuccess: () => {
+        toast.success(`Réservation confirmée pour ${formattedTime} !`, {
+          description: "Merci de votre intérêt pour notre MAM.",
+        })
         reset()
         // La fermeture de la modale est gérée par le reset ou l'état open si besoin
       },
