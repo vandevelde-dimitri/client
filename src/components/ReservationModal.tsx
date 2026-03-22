@@ -98,14 +98,30 @@ export function ReservationModal({ time, disabled }: ReservationModalProps) {
     <Dialog onOpenChange={(open) => !open && reset()}>
       <DialogTrigger asChild>
         <Button
-          variant={disabled ? "secondary" : "outline"}
-          className="h-14 w-full justify-between text-lg font-medium"
+          // On change dynamiquement le style si c'est complet
+          variant={disabled ? "outline" : "outline"}
+          className={`h-14 w-full justify-between text-lg font-medium transition-all ${
+            disabled
+              ? "cursor-not-allowed border-red-200 bg-red-50 text-red-400 opacity-80"
+              : "hover:border-primary hover:bg-primary/5"
+          }`}
           disabled={disabled || isPending}
         >
-          <span>{formattedTime}</span>
-          <span className="text-sm font-normal text-muted-foreground">
-            {disabled ? "Complet" : `Jusqu'à ${endTime}`}
-          </span>
+          <div className="flex flex-col items-start leading-none">
+            <span>{formattedTime}</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {disabled && (
+              // Petit point rouge pour le côté visuel "complet"
+              <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+            )}
+            <span
+              className={`text-sm font-normal ${disabled ? "text-red-500/70" : "text-muted-foreground"}`}
+            >
+              {disabled ? "Complet" : `Jusqu'à ${endTime}`}
+            </span>
+          </div>
         </Button>
       </DialogTrigger>
 
