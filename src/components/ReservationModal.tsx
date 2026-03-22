@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label"
 import { useCreateReservations } from "@/hook/useReservations"
 import { yupResolver } from "@hookform/resolvers/yup"
 import { useForm } from "react-hook-form"
-import { toast } from "sonner"
 import * as yup from "yup"
 
 const schema = yup
@@ -38,15 +37,10 @@ type FormData = yup.InferType<typeof schema>
 
 interface ReservationModalProps {
   time: string
-  date: Date | undefined
   disabled?: boolean
 }
 
-export function ReservationModal({
-  time,
-  date,
-  disabled,
-}: ReservationModalProps) {
+export function ReservationModal({ time, disabled }: ReservationModalProps) {
   const {
     register,
     handleSubmit,
@@ -55,6 +49,7 @@ export function ReservationModal({
   } = useForm<FormData>({
     resolver: yupResolver(schema),
   })
+
   const { mutate: createReservation, isPending } = useCreateReservations()
 
   const calculateEndTime = (startTime: string) => {
@@ -69,74 +64,53 @@ export function ReservationModal({
   }
 
   const onSubmit = async (data: FormData) => {
-    if (!date) return
+    const currentCount = await countReservations(time)
 
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, "0")
-    const day = String(date.getDate()).padStart(2, "0")
-
-    const formattedDateTime = `${year}-${month}-${day} ${time.replace("h", ":")}:00`
-
-    try {
-      const currentCount = await countReservations(formattedDateTime)
-
-      if (currentCount >= 2) {
-        toast("Désolé, quelqu'un vient juste de réserver la dernière place !", {
-          description: "Veuillez choisir un autre créneau.",
-        })
-
-        return
-      }
-
-      // --- SI OK, ON CRÉE LA RÉSERVATION ---
-      const finalPayload = {
-        firstname: data.firstname,
-        lastname: data.lastname,
-        phone: data.phone,
-        creneau: formattedDateTime,
-      }
-
-      createReservation(finalPayload, {
-        onSuccess: () => {
-          toast("Réservation confirmée !", {
-            description: `Votre rendez-vous est fixé pour le ${day}/${month} à ${time.replace("h", "h")}.`,
-          })
-          reset()
-          // Optionnel: fermer la modale ici si tu gères l'état 'open'
-        },
-      })
-    } catch (error) {
-      console.error("Erreur lors de la vérification", error)
+    if (currentCount >= 2) {
+      alert("Désolé, ce créneau vient d'être rempli par un autre utilisateur !")
+      return
     }
+
+    const finalPayload = {
+      firstname: data.firstname,
+      lastname: data.lastname,
+      phone: data.phone,
+      creneau: time,
+    }
+
+    createReservation(finalPayload, {
+      onSuccess: () => {
+        reset()
+        // La fermeture de la modale est gérée par le reset ou l'état open si besoin
+      },
+    })
   }
 
-  const displayDate = date?.toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "long",
-  })
   const endTime = calculateEndTime(time)
+  const formattedTime = time.replace(":", "h")
 
   return (
     <Dialog onOpenChange={(open) => !open && reset()}>
       <DialogTrigger asChild>
         <Button
           variant={disabled ? "secondary" : "outline"}
-          className="h-14 w-full justify-between text-lg"
-          disabled={disabled}
+          className="h-14 w-full justify-between text-lg font-medium"
+          disabled={disabled || isPending}
         >
-          <span>{time.replace(":", "h")}</span>
-          <span className="text-sm text-muted-foreground">
+          <span>{formattedTime}</span>
+          <span className="text-sm font-normal text-muted-foreground">
             {disabled ? "Complet" : `Jusqu'à ${endTime}`}
           </span>
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-106.25">
+      <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
-            <DialogTitle>Réserver le {displayDate}</DialogTitle>
+            <DialogTitle>Réserver le créneau de {formattedTime}</DialogTitle>
             <DialogDescription>
-              Créneau de {time.replace(":", "h")} à {endTime}
+              Portes ouvertes le 11 avril. Créneau de {formattedTime} à{" "}
+              {endTime}.
             </DialogDescription>
           </DialogHeader>
 
@@ -146,11 +120,11 @@ export function ReservationModal({
               <Input
                 id="firstname"
                 {...register("firstname")}
-                placeholder="Jean"
+                placeholder="Ex: Jean"
                 className={errors.firstname ? "border-destructive" : ""}
               />
               {errors.firstname && (
-                <p className="text-sm text-destructive">
+                <p className="text-xs text-destructive">
                   {errors.firstname.message}
                 </p>
               )}
@@ -161,11 +135,11 @@ export function ReservationModal({
               <Input
                 id="lastname"
                 {...register("lastname")}
-                placeholder="Dupont"
+                placeholder="Ex: Dupont"
                 className={errors.lastname ? "border-destructive" : ""}
               />
               {errors.lastname && (
-                <p className="text-sm text-destructive">
+                <p className="text-xs text-destructive">
                   {errors.lastname.message}
                 </p>
               )}
@@ -177,11 +151,11 @@ export function ReservationModal({
                 id="phone"
                 type="tel"
                 {...register("phone")}
-                placeholder="06 12 34 56 78"
+                placeholder="06 00 00 00 00"
                 className={errors.phone ? "border-destructive" : ""}
               />
               {errors.phone && (
-                <p className="text-sm text-destructive">
+                <p className="text-xs text-destructive">
                   {errors.phone.message}
                 </p>
               )}
@@ -190,7 +164,9 @@ export function ReservationModal({
 
           <DialogFooter>
             <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending ? "Enregistrement..." : "Confirmer le rendez-vous"}
+              {isPending
+                ? "Validation en cours..."
+                : "Confirmer la réservation"}
             </Button>
           </DialogFooter>
         </form>
